@@ -112,18 +112,11 @@ impl TFIDFAnalyzer {
         a.iter().zip(b.iter()).map(|(x, y)| x * y).sum::<f32>().max(0.0)
     }
 
-    /// softmax：相似度 → 概率分布（数值稳定版，减 max）
+    /// 底层 softmax：相似度 → 概率分布（Tensor.softmax(-1) → f64 累加器 + Rayon 并行）
     fn softmax(sims: &[f32]) -> Vec<f32> {
-        let max_v = sims.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
-        let mut exps: Vec<f32> = Vec::with_capacity(sims.len());
-        let mut sum_exp = 0.0f64;
-        for s in sims {
-            let e = (s - max_v).exp() as f64;
-            exps.push(e as f32);
-            sum_exp += e;
-        }
-        let sum_exp = if sum_exp > 0.0 { sum_exp } else { 1.0 };
-        exps.iter().map(|e| e / sum_exp as f32).collect()
+        use oyta_tensor::prelude::*;
+        let t = Tensor::<f32, Cpu>::from_data(sims.to_vec(), [sims.len()]).unwrap();
+        t.softmax(-1).expect("softmax 底层调用失败").data_slice().to_vec()
     }
 
     /// 提取 char n-gram（n=2,3）

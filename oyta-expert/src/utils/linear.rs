@@ -27,11 +27,12 @@ impl Linear {
     pub fn new(domain_id: u32, module: &str, in_features: usize, out_features: usize) -> Self {
         // Kaiming 均匀分布 scale = sqrt(6 / fan_in)
         let scale = (6.0 / in_features as f32).sqrt();
-        // randn 生成标准正态 → 乘 scale 得到均匀分布近似
+        // randn 生成标准正态 → 底层 mul scale（D::elwise_mul Rayon 并行）
         let w_raw = Tensor::<f32, Cpu>::randn([out_features, in_features]);
-        let w_data: Vec<f32> = w_raw.data_slice().iter().map(|v| v * scale).collect();
-        let w_tensor = Tensor::<f32, Cpu>::from_data(w_data, [out_features, in_features])
-            .expect("Linear weight 构造失败");
+        let w_tensor = {
+            let scale_tensor = Tensor::<f32, Cpu>::full([out_features, in_features], scale);
+            w_raw.mul(&scale_tensor).expect("Linear weight scale mul 失败")
+        };
         // bias 初始化为 0
         let b_tensor = Tensor::<f32, Cpu>::zeros([out_features]);
 

@@ -1,4 +1,4 @@
-//! CrossEntropyLoss：Softmax + NLL（log_softmax 数值稳定版本）
+//! CrossEntropyLoss：Softmax + NLL
 //!
 //! 数学原理：
 //!   loss = -Σ target[c] × log softmax(logits[c])
@@ -7,11 +7,16 @@
 //! label_smoothing 支持：把硬标签平滑成软标签
 //!   target_smooth = (1-ε) × one_hot + ε/(K-1) × uniform
 //!   → 防止模型过度自信（泛化能力提升）
+//!
+//! 底层调用链（100% 走 oyta-tensor Backend trait）：
+//!   Tensor.softmax(-1) → D::softmax     (f64 累加器 + Rayon 并行)
+//!   Tensor.log()        → D::elwise_log (一元算子 Backend kernel)
+//!   Tensor.mean(None)   → D::reduce_mean (归约 Backend kernel)
+//!   Tensor.sum()        → reduce_sum     (归约)
 
 use oyta_tensor::prelude::*;
 use crate::traits::loss_fn::LossFn;
 use crate::types::reduction::Reduction;
-use crate::utils::log_softmax::{log_softmax_stable, softmax_stable};
 
 /// 交叉熵损失函数
 pub struct CrossEntropyLoss {
@@ -37,90 +42,85 @@ impl CrossEntropyLoss {
 }
 
 impl LossFn for CrossEntropyLoss {
-    /// 前向损失计算（数值稳定 log_softmax）
+    /// 前向损失计算
+    /// 底层：softmax → log → per-sample NLL → reduce
     fn compute(&self, logits: &Tensor<f32, Cpu>, target: &Tensor<f32, Cpu>) -> Tensor<f32, Cpu> {
         let batch = logits.shape().dims[0];
         let nc = self.num_classes;
-        let ld = logits.data_slice();
         let td = target.data_slice();
 
+        // ===== 底层 softmax（f64 累加器数值稳定 + Rayon 并行）=====
+        let sm_tensor = logits.softmax(-1).expect("softmax 底层调用失败");
+        // ===== 底层 log（D::elwise_log Backend kernel）=====
+        let log_sm_tensor = sm_tensor.log();
+        let log_sm = log_sm_tensor.data_slice();  // &[f32]
+
+        // ===== 计算 per-sample NLL（逐样本逻辑，难以 Tensor 化）=====
         let mut per_sample: Vec<f32> = Vec::with_capacity(batch);
+        let eps = self.label_smoothing;
         for n in 0..batch {
             let row = n * nc;
-            // ===== 数值稳定 log_softmax =====
-            let logits_row: Vec<f32> = (0..nc).map(|c| ld[row + c]).collect();
-            let log_sm = log_softmax_stable(&logits_row);
-
-            // ===== 构造 target（支持 class index 和 one-hot 两种格式）=====
-            // target.numel() == batch → 每个元素是 class index
-            // target.numel() == batch * nc → one-hot 分布
-            let eps = self.label_smoothing;
             let mut loss_nll: f64 = 0.0;
             if target.numel() == batch {
                 let class = td[n] as usize;
-                // label_smoothing: 硬标签 → 软标签
-                // loss = -(1-ε) × log_sm[class] - Σ_{c≠class} ε/(K-1) × log_sm[c]
                 if eps > 0.0 {
                     let eps_f64 = eps as f64;
                     let uniform = eps_f64 / (nc as f64 - 1.0).max(1.0);
                     for c in 0..nc {
                         let weight = if c == class { 1.0 - eps_f64 } else { uniform };
-                        loss_nll -= weight * (log_sm[c] as f64);
+                        loss_nll -= weight * (log_sm[row + c] as f64);
                     }
                 } else {
-                    loss_nll = -(log_sm[class] as f64);
+                    loss_nll = -(log_sm[row + class] as f64);
                 }
             } else {
-                // one-hot / 软标签分布
                 for c in 0..nc {
-                    loss_nll -= td[n * nc + c] as f64 * (log_sm[c] as f64);
+                    loss_nll -= td[n * nc + c] as f64 * (log_sm[row + c] as f64);
                 }
             }
             per_sample.push(loss_nll as f32);
         }
 
-        // ===== Reduction =====
+        // ===== 底层 Reduction（D::reduce_mean / reduce_sum Backend kernel）=====
+        let per_tensor = Tensor::<f32, Cpu>::from_data(per_sample, [batch]).unwrap();
         match self.reduction {
             Reduction::Mean => {
-                let m = per_sample.iter().sum::<f32>() / per_sample.len() as f32;
-                Tensor::<f32, Cpu>::from_data(vec![m], [1]).unwrap()
+                // 底层 mean(None) → D::reduce_mean
+                let m = per_tensor.mean(None).expect("mean 底层调用失败");
+                Tensor::<f32, Cpu>::from_data(vec![m.item()], [1]).unwrap()
             }
             Reduction::Sum => {
-                let s: f32 = per_sample.iter().sum();
+                // 底层 sum() → reduce_sum
+                let s: f32 = per_tensor.sum().expect("sum 底层调用失败");
                 Tensor::<f32, Cpu>::from_data(vec![s], [1]).unwrap()
             }
-            Reduction::None => {
-                Tensor::<f32, Cpu>::from_data(per_sample, [batch]).unwrap()
-            }
+            Reduction::None => per_tensor,
         }
     }
 
     /// 解析梯度：grad = softmax(logits) - one_hot(target)
-    ///
-    /// 一行精确梯度（PyTorch 内部实现）
+    /// 底层：softmax → Vec one_hot 构造 → Tensor
     fn grad(&self, logits: &Tensor<f32, Cpu>, target: &Tensor<f32, Cpu>) -> Tensor<f32, Cpu> {
         let batch = logits.shape().dims[0];
         let nc = self.num_classes;
-        let ld = logits.data_slice();
         let td = target.data_slice();
-        let mut grad = vec![0.0f32; batch * nc];
 
+        // ===== 底层 softmax =====
+        let sm_tensor = logits.softmax(-1).expect("softmax 底层调用失败");
+        let sm = sm_tensor.data_slice();
+
+        // grad = softmax - one_hot
+        let mut grad = vec![0.0f32; batch * nc];
         for n in 0..batch {
             let row = n * nc;
-            // softmax
-            let logits_row: Vec<f32> = (0..nc).map(|c| ld[row + c]).collect();
-            let sm = softmax_stable(&logits_row);
-
-            // one_hot
-            let mut one_hot = vec![0.0f32; nc];
             if target.numel() == batch {
-                one_hot[td[n] as usize] = 1.0;
+                let class = td[n] as usize;
+                for c in 0..nc {
+                    grad[row + c] = sm[row + c] - if c == class { 1.0 } else { 0.0 };
+                }
             } else {
-                for c in 0..nc { one_hot[c] = td[n * nc + c]; }
+                for c in 0..nc { grad[row + c] = sm[row + c] - td[n * nc + c]; }
             }
-
-            // grad = softmax - one_hot
-            for c in 0..nc { grad[row + c] = sm[c] - one_hot[c]; }
         }
 
         // Reduction 缩放

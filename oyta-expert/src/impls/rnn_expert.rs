@@ -39,15 +39,11 @@ impl DomainExpert for RNNExpert {
     fn output_dim(&self) -> usize { self.out_dim }
     fn is_training(&self) -> bool { oyta_tensor::is_training_mode() }
 
-    /// 骨架实现：hidden → tanh → proj
-    /// 实际 RNN 应序列级循环
+    /// 骨架实现：hidden → 底层 tanh → proj
     fn forward(&self, x: &Tensor<f32, Cpu>) -> Tensor<f32, Cpu> {
         let h = self.hidden.forward(x);
-        // tanh 激活（手动写，oyta_tensor 可能没有 tanh）
-        let hd = h.data_slice();
-        let out_data: Vec<f32> = hd.iter().map(|v| v.tanh()).collect();
-        let tanh_h = Tensor::<f32, Cpu>::from_data(out_data, h.shape().clone())
-            .expect("RNN tanh 构造失败");
+        // 底层 tanh：Tensor.tanh() → D::elwise_tanh Rayon 并行（返回 Self，内部 expect）
+        let tanh_h = h.tanh();
         self.proj.forward(&tanh_h)
     }
 

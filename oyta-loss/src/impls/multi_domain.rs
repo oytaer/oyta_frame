@@ -80,13 +80,9 @@ impl MultiDomainLoss {
         Tensor::<f32, Cpu>::from_data(vec![total], [1]).unwrap()
     }
 
-    /// 把 loss Tensor 转 f32 标量
+    /// 把 loss Tensor 转 f32 标量（底层 Tensor.mean(None) → D::reduce_mean）
     pub fn item(&self, loss: &Tensor<f32, Cpu>) -> f32 {
-        if loss.numel() == 1 {
-            loss.data_slice()[0]
-        } else {
-            let d = loss.data_slice();
-            d.iter().sum::<f32>() / d.len() as f32
-        }
+        if loss.numel() == 1 { return loss.item(); }
+        loss.mean(None).expect("mean 底层调用失败").item()
     }
 }

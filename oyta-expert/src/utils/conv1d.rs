@@ -45,11 +45,12 @@ impl Conv1d {
         let k = config.kernel_size;
         let fan_in = config.in_channels * k;
         let scale = (6.0 / fan_in as f32).sqrt();
-        // randn 生成 [out_c, in_c, k_size] 权重 → 乘 scale
+        // randn 生成 [out_c, in_c, k_size] 权重 → 底层 mul scale（D::elwise_mul Rayon 并行）
         let w_raw = Tensor::<f32, Cpu>::randn([config.out_channels, config.in_channels, k]);
-        let w_data: Vec<f32> = w_raw.data_slice().iter().map(|v| v * scale).collect();
-        let w_tensor = Tensor::<f32, Cpu>::from_data(w_data, [config.out_channels, config.in_channels, k])
-            .expect("Conv1d weight 构造失败");
+        let w_tensor = {
+            let scale_t = Tensor::<f32, Cpu>::full([config.out_channels, config.in_channels, k], scale);
+            w_raw.mul(&scale_t).expect("Conv1d weight scale mul 失败")
+        };
         let b_tensor = Tensor::<f32, Cpu>::zeros([config.out_channels]);
 
         Self {

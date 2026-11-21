@@ -289,13 +289,11 @@ impl HybridAnalyzer {
         feats
     }
 
-    /// softmax（Vec<f32> 版本，数值稳定）
+    /// 底层 softmax：Vec<f32> 版本（Tensor.softmax(-1) → f64 累加器 + Rayon 并行）
     fn softmax_vec(logits: &[f32]) -> Vec<f32> {
-        let max_v = logits.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
-        let exps: Vec<f32> = logits.iter().map(|x| (x - max_v).exp()).collect();
-        let sum: f32 = exps.iter().sum();
-        if sum <= 0.0 { vec![1.0 / exps.len() as f32; exps.len()] }
-        else { exps.iter().map(|e| e / sum).collect() }
+        use oyta_tensor::prelude::*;
+        let t = Tensor::<f32, Cpu>::from_data(logits.to_vec(), [logits.len()]).unwrap();
+        t.softmax(-1).expect("softmax 底层调用失败").data_slice().to_vec()
     }
 
     /// GELU 激活（tanh 近似版，Rust 2024 稳定版兼容）

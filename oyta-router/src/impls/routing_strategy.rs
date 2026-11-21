@@ -146,16 +146,12 @@ impl RoutingStrategy {
         if active_raw.is_empty() {
             return (Vec::new(), Vec::new());
         }
-        // softmax（减 max）
-        let max_w = active_raw
-            .iter()
-            .map(|(_, w)| *w)
-            .fold(f32::NEG_INFINITY, f32::max);
-        let max_w = if max_w.is_finite() { max_w } else { 0.0 };
-        let exp_vec: Vec<f32> = active_raw.iter().map(|(_, w)| (w - max_w).exp()).collect();
-        let sum_exp: f32 = exp_vec.iter().sum();
-        let sum_exp = if sum_exp > 0.0 { sum_exp } else { 1.0 };
-        let norm: Vec<f32> = exp_vec.iter().map(|e| e / sum_exp).collect();
+        // 底层 softmax：Tensor.softmax(-1) → f64 累加器 + Rayon 并行 + 数值稳定
+        use oyta_tensor::prelude::*;
+        let weights_vec: Vec<f32> = active_raw.iter().map(|(_, w)| *w).collect();
+        let weights_tensor = Tensor::<f32, Cpu>::from_data(weights_vec.clone(), [weights_vec.len()]).unwrap();
+        let sm_tensor = weights_tensor.softmax(-1).expect("softmax 底层调用失败");
+        let norm = sm_tensor.data_slice().to_vec();
         let ids: Vec<u32> = active_raw.iter().map(|(id, _)| *id).collect();
         (ids, norm)
     }

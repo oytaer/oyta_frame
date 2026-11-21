@@ -106,14 +106,10 @@ impl DomainExpert for CNN1DExpert {
         let bn_out = bn.forward(&flat_for_bn);
         drop(bn);
 
-        // Step 4: ReLU（gelu 也行，这里用 relu 简洁）
-        let relu_out = bn_out.reshape([batch, out_c, out_len])
+        // Step 4: 底层 ReLU（Tensor.relu() → D::elwise_relu Rayon 并行）
+        let reshape_for_relu = bn_out.reshape([batch, out_c, out_len])
             .expect("CNN1D reshape back 失败");
-        let relu_data: Vec<f32> = relu_out.data_slice().iter()
-            .map(|&v| if v > 0.0 { v } else { 0.0 })
-            .collect();
-        let relu_out = Tensor::<f32, Cpu>::from_data(relu_data, [batch, out_c, out_len])
-            .expect("CNN1D relu 构造失败");
+        let relu_out = reshape_for_relu.relu().expect("relu 底层调用失败");
 
         // Step 5: MaxPool1d [batch, out_c, out_len_pool]
         let mut pool = self.pool.lock().unwrap();
