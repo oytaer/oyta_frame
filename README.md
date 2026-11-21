@@ -293,7 +293,7 @@ fn main() {
 ```
 oyta-frame/                       ← workspace 根，纯 Lib crate
 ├── Cargo.toml                    ← workspace 统一依赖 + 顶层 re-export
-├── LICENSE                       ← SSPL + AGPL + 商用约束（禁止大厂盗用）
+├── LICENSE                       ← SSPL + AGPL + 商用约束
 ├── README.md                     ← 本文件
 ├── src/
 │   └── lib.rs                    ← 顶层公共 API 入口（94 个符号 + prelude）
@@ -339,7 +339,7 @@ oyta-frame/                       ← workspace 根，纯 Lib crate
 **核心约束**：
 - AGPL-3.0 强 Copyleft：修改后必须开源
 - SSPL Section 13 扩展：网络服务使用必须公开整个服务栈源码
-- 商用实体（年营收 > 1000 万美元）禁止闭源商用和 SaaS 化
+- 商用实体 禁止闭源商用和 SaaS 化
 
 **允许**：个人学习 / 学术研究 / 开源项目集成 / 企业内部非核心系统使用
 
