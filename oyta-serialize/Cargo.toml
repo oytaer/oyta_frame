@@ -1,0 +1,10 @@
+[package]
+name = "oyta-serialize"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+oyta-tensor = { workspace = true }
+oyta-router = { workspace = true }
+serde       = { workspace = true }
+serde_json  = { workspace = true }

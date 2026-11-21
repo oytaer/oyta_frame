@@ -1,0 +1,8 @@
+[package]
+name = "oyta-optim"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+oyta-tensor = { workspace = true }
+oyta-router = { workspace = true }

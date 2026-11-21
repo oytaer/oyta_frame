@@ -1,0 +1,12 @@
+/target
+# JetBrains IDE
+.idea/
+.vscode/
+*.iml
+# macOS
+.DS_Store
+# Windows
+Thumbs.db
+# docs 目录（用户要求排除）
+/docs/
+

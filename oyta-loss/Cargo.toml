@@ -1,0 +1,7 @@
+[package]
+name = "oyta-loss"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+oyta-tensor = { workspace = true }

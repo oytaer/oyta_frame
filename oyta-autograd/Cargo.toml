@@ -1,0 +1,8 @@
+[package]
+name = "oyta-autograd"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+oyta-tensor = { workspace = true }
+rayon       = { workspace = true }

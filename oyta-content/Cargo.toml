@@ -1,0 +1,13 @@
+[package]
+name = "oyta-content"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+oyta-tensor = { workspace = true }
+serde       = { workspace = true }
+serde_json  = { workspace = true }
+regex       = { workspace = true }
+rayon       = { workspace = true }
+thiserror   = { workspace = true }
+anyhow      = { workspace = true }

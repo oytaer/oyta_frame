@@ -1,0 +1,12 @@
+[package]
+name = "oyta-expert"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+oyta-tensor = { workspace = true }
+oyta-router = { workspace = true }
+
+# ===== 测试依赖：serial_test 解决全局 training_mode race condition =====
+[dev-dependencies]
+serial_test = { workspace = true }

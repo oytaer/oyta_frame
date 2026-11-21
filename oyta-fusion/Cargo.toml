@@ -1,0 +1,9 @@
+[package]
+name = "oyta-fusion"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+oyta-tensor = { workspace = true }
+oyta-router = { workspace = true }
+oyta-expert = { workspace = true }

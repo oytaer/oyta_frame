@@ -1,0 +1,13 @@
+[package]
+name = "oyta-trainer"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+oyta-tensor   = { workspace = true }
+oyta-content  = { workspace = true }
+oyta-router   = { workspace = true }
+oyta-expert   = { workspace = true }
+oyta-fusion   = { workspace = true }
+oyta-loss     = { workspace = true }
+oyta-optim    = { workspace = true }
