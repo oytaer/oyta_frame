@@ -2,6 +2,9 @@
 name = "oyta-serialize"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "oyta-frame safetensors v0 格式稀疏序列化：手写完整二进制格式（8 bytes header_len + JSON 8 字节对齐 + LE f32），save_sparse_safetensors / load_sparse_safetensors（active_only 过滤 + allow_partial 容错），key 命名 domain_{did}.{module}.{param}。"
 
 [dependencies]
 oyta-tensor = { workspace = true }

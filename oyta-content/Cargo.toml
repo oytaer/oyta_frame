@@ -2,6 +2,9 @@
 name = "oyta-content"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "oyta-frame 内容分析层：原始输入 → 领域权重分布。内置 RuleBased / TFIDF / Hybrid 三种分析器，支持自定义 Domain 词典。"
 
 [dependencies]
 oyta-tensor = { workspace = true }

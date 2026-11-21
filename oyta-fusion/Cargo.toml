@@ -2,6 +2,9 @@
 name = "oyta-fusion"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "oyta-frame 特征融合层：WeightedSum / ConcatLinear / CrossAttention（真实 FlashAttention + gating bias 注入）三种融合策略，TaskHead 枚举统一分发。"
 
 [dependencies]
 oyta-tensor = { workspace = true }

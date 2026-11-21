@@ -2,6 +2,9 @@
 name = "oyta-autograd"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "oyta-frame 自动微分引擎：Node 带 domain_id 的稀疏计算图，Op 17+ 变体（含 Conv1dMasked / BatchNorm1dMasked / Conv1dWithSequenceMask 三个掩码 backward），sparse_backward 三层过滤未激活领域子图。"
 
 [dependencies]
 oyta-tensor = { workspace = true }

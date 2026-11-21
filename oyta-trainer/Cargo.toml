@@ -2,6 +2,9 @@
 name = "oyta-trainer"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "oyta-frame 端到端训练主循环：SparseTrainer 11 步完整稀疏训练时序（ContentAnalyzer → Router → Experts→continue 跳过 → Fusion → TaskHead → Loss → backward → clip+step），DataLoader trait + Callback trait（LogCallback / SaveCallback），evaluate() 纯推理模式。"
 
 [dependencies]
 oyta-tensor   = { workspace = true }

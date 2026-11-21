@@ -2,6 +2,9 @@
 name = "oyta-router"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "oyta-frame 稀疏路由 + 参数池层：TopK / Threshold 路由策略，SparseParameterPool 按领域独立维护参数，三层稀疏掩码（domain / channel / sequence）。"
 
 [dependencies]
 oyta-tensor  = { workspace = true }

@@ -2,6 +2,9 @@
 name = "oyta-optim"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "oyta-frame 优化器 + 调度器层：SparseAdam / SparseSGD 按领域独立维护 HashMap<u32, DomainState>（m / v / t 每个领域独立），三个 Scheduler（WarmupCosineAnneal / CosineAnneal / StepLR），zero_grad_sparse / step_sparse / clip_grad_norm_sparse 三个稀疏核心方法。"
 
 [dependencies]
 oyta-tensor = { workspace = true }

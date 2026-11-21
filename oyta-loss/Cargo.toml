@@ -2,6 +2,9 @@
 name = "oyta-loss"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "oyta-frame 损失函数层：CrossEntropyLoss（label_smoothing）、MSELoss、MultiDomainLoss 按 active_ids 过滤辅助损失。"
 
 [dependencies]
 oyta-tensor = { workspace = true }

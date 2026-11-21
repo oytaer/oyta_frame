@@ -2,6 +2,9 @@
 name = "oyta-expert"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "oyta-frame 专家模块层：MLP / CNN1D / RNN / Transformer 四种专家，ExpertExecutor 框架层 continue 跳过未激活专家实现 Layer 1 稀疏。"
 
 [dependencies]
 oyta-tensor = { workspace = true }
